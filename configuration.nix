@@ -11,6 +11,7 @@ in {
     # Service configuration.
     ./containers.nix
     ./vscode-server.nix
+    ./wireguard.nix
   ];
 
   nixpkgs.config.packageOverrides = pkgs: {
@@ -147,6 +148,7 @@ in {
       unixtools.xxd
       unzip
       usbutils
+      wireguard-tools
       wget
       zsh
       python
