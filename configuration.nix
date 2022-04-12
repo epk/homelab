@@ -1,5 +1,12 @@
 { config, pkgs, ... }:
-let stable = import <nixpkgs> { };
+let
+  stable = import <nixpkgs> { };
+
+  # Import comma with local nix-index preferred over the comma one.
+  comma = import (builtins.fetchTarball
+    "https://github.com/nix-community/comma/archive/refs/tags/1.1.0.tar.gz") {
+      inherit pkgs;
+    };
 
 in {
   imports = [
@@ -112,7 +119,10 @@ in {
     # Packages which should be installed on every machine.
     systemPackages = with pkgs; [
       bandwhich
+      bind
       byobu
+      comma
+      conntrack-tools
       dmidecode
       ethtool
       bpftools
@@ -125,6 +135,7 @@ in {
       htop
       iftop
       iperf3
+      iptables
       jq
       lm_sensors
       lshw
@@ -155,6 +166,9 @@ in {
     ];
   };
 
+  # Enable firmware updates when possible.
+  hardware.enableRedistributableFirmware = true;
+
   # Enable Chrony
   services.chrony.enable = true;
 
@@ -164,6 +178,12 @@ in {
 
   # Tailscale
   services.tailscale.enable = true;
+
+  # fstrim
+  services.fstrim.enable = true;
+  
+  # fwupd
+  services.fwupd.enable = true;
 
   security.sudo.wheelNeedsPassword = false;
   virtualisation.docker = { enable = true; };
