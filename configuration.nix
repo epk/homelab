@@ -19,6 +19,7 @@ in {
     ./containers.nix
     ./vscode-server.nix
     ./wireguard.nix
+    ./o11y.nix
   ];
 
   nixpkgs.config.packageOverrides = pkgs: {
