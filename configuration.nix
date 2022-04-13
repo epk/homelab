@@ -16,7 +16,7 @@ in {
     <nixos-hardware/common/cpu/intel>
 
     # Service configuration.
-    ./containers.nix
+    # ./containers.nix
     ./vscode-server.nix
     ./wireguard.nix
     ./o11y.nix
@@ -61,7 +61,7 @@ in {
 
     useDHCP = false;
     interfaces.eno1.useDHCP = true;
-    interfaces.wlp2s0.useDHCP = true;
+    interfaces.eno1.mtu = 9000;
     timeServers = [ "time.nrc.ca" "time.chu.nrc.ca" "time.google.com" ];
 
     firewall = {
