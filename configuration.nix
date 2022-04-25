@@ -16,7 +16,7 @@ in {
     <nixos-hardware/common/cpu/intel>
 
     # Service configuration.
-    # ./containers.nix
+    ./containers.nix
     ./vscode-server.nix
     ./wireguard.nix
     ./o11y.nix
@@ -61,7 +61,6 @@ in {
 
     useDHCP = false;
     interfaces.eno1.useDHCP = true;
-    interfaces.eno1.mtu = 9000;
     timeServers = [ "time.nrc.ca" "time.chu.nrc.ca" "time.google.com" ];
 
     firewall = {
@@ -87,6 +86,7 @@ in {
     shell = pkgs.zsh;
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICyjlZJ1nv50nYGs1s4sS+M3hKDg6GBM9bzAiB6RU5Cq"
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFaaUnx1KDS6zsH4ADeumbZQsIkBWeGW/TCquzMjtg9T"
     ];
   };
 

@@ -23,6 +23,12 @@
     fsType = "vfat";
   };
 
+  fileSystems."/home/adi/data" = { 
+    device = "/dev/disk/by-uuid/d2c292da-cd39-425d-87ca-72408a93d7d7";
+    fsType = "ext4";
+    options = ["noatime" "nodiratime" "discard" ];
+  };
+
   swapDevices =
     [{ device = "/dev/disk/by-uuid/a5bf1753-3df3-4d59-951a-9a7f69c49c26"; }];
 
