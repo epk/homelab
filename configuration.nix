@@ -1,6 +1,9 @@
 { config, pkgs, ... }:
 let
-  stable = import <nixpkgs> { };
+  baseconfig = { allowUnfree = true; };
+
+  stable = import <nixpkgs> { config = baseconfig; };
+  unstable = import <nixpkgs-unstable> { config = baseconfig; };
 
   # Import comma with local nix-index preferred over the comma one.
   comma = import (builtins.fetchTarball
@@ -20,6 +23,7 @@ in {
     ./vscode-server.nix
     ./wireguard.nix
     ./o11y.nix
+    ./tailscale.nix
   ];
 
   nixpkgs.config.packageOverrides = pkgs: {
@@ -82,7 +86,7 @@ in {
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.adi = {
     isNormalUser = true;
-    extraGroups = [ "wheel" "sudo" "docker" ]; # Enable ‘sudo’ for the user.
+    extraGroups = [ "wheel" "sudo" "docker" "root" ]; # Enable ‘sudo’ for the user.
     shell = pkgs.zsh;
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICyjlZJ1nv50nYGs1s4sS+M3hKDg6GBM9bzAiB6RU5Cq"
@@ -154,7 +158,7 @@ in {
       pkg-config
       ripgrep
       smartmontools
-      tailscale
+      unstable.tailscale
       tcpdump
       tmux
       unixtools.xxd
@@ -176,9 +180,6 @@ in {
   # Enable the OpenSSH daemon.
   services.openssh.enable = true;
   programs.mosh.enable = true;
-
-  # Tailscale
-  services.tailscale.enable = true;
 
   # fstrim
   services.fstrim.enable = true;
