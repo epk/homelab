@@ -1,42 +1,40 @@
-{ config, pkgs, ... }:
+{ config, lib, pkgs, modulesPath, ... }:
 let
   baseconfig = { allowUnfree = true; };
 
   stable = import <nixpkgs> { config = baseconfig; };
   unstable = import <nixpkgs-unstable> { config = baseconfig; };
 
-  # Import comma with local nix-index preferred over the comma one.
-  comma = import (builtins.fetchTarball
-    "https://github.com/nix-community/comma/archive/refs/tags/1.1.0.tar.gz") {
-      inherit pkgs;
-    };
+  comma = (import (pkgs.fetchFromGitHub {
+    owner = "nix-community";
+    repo = "comma";
+    rev = "v1.7.1";
+    sha256 = "sha256-x2HVm2vcEFHDrCQLIp5QzNsDARcbBfPdaIMLWVNfi4c=";
+  })).default;
 
 in {
   imports = [
     ./hardware-configuration.nix
+    (modulesPath + "/profiles/all-hardware.nix")
 
     <nixos-hardware/common/pc/ssd>
     <nixos-hardware/common/cpu/intel>
 
     # Service configuration.
-    ./containers.nix
-    ./vscode-server.nix
-    ./wireguard.nix
     ./o11y.nix
     ./tailscale.nix
+    ./containers.nix
   ];
 
-  nixpkgs.config.packageOverrides = pkgs: {
-    vaapiIntel = pkgs.vaapiIntel.override { enableHybridCodec = true; };
-  };
   hardware.opengl = {
     enable = true;
     extraPackages = with pkgs; [
-      pkgs.intel-compute-runtime
-      intel-media-driver # LIBVA_DRIVER_NAME=iHD
-      vaapiIntel # LIBVA_DRIVER_NAME=i965 (older but works better for Firefox/Chromium)
-      vaapiVdpau
-      libvdpau-va-gl
+      unstable.intel-compute-runtime
+      stable.intel-ocl
+      stable.intel-media-driver
+      stable.vaapiIntel
+      stable.vaapiVdpau
+      stable.libvdpau-va-gl
     ];
   };
 
@@ -47,13 +45,13 @@ in {
       efi.canTouchEfiVariables = true;
     };
 
-    # Linux kernel 5.15 LTS
-    kernelPackages = stable.linuxPackages_5_15;
+    # Latest Linux kernel
+    kernelPackages = unstable.linuxPackages_latest;
 
-    kernelModules = [ "tcp_bbr" ];
+    kernelModules = [ "tcp_bbr" "kvm-intel" ];
     kernel.sysctl."net.ipv4.tcp_congestion_control" = "bbr";
     kernel.sysctl."net.core.default_qdisc" = "fq";
-    cleanTmpDir = true;
+    tmp.cleanOnBoot = true;
 
     kernel.sysctl."net.ipv4.ip_forward" = 1;
     kernel.sysctl."net.ipv6.conf.all.forwarding" = 1;
@@ -69,9 +67,10 @@ in {
 
     firewall = {
       enable = true;
-      trustedInterfaces = [ "tailscale0" ];
-      allowedUDPPorts = [ config.services.tailscale.port ];
-      allowedTCPPorts = [ 22 ];
+      checkReversePath = "loose";
+      trustedInterfaces = [ "tailscale0" "eno1" ];
+      allowedUDPPorts = [ 443 config.services.tailscale.port 51413 4001 ];
+      allowedTCPPorts = [ 22 53 80 443 51413 4001 8080];
     };
   };
 
@@ -86,11 +85,11 @@ in {
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.adi = {
     isNormalUser = true;
-    extraGroups = [ "wheel" "sudo" "docker" "root" ]; # Enable ‘sudo’ for the user.
+    extraGroups =
+      [ "wheel" "sudo" "oci" "docker" "root" ]; # Enable ‘sudo’ for the user.
     shell = pkgs.zsh;
     openssh.authorizedKeys.keys = [
-      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICyjlZJ1nv50nYGs1s4sS+M3hKDg6GBM9bzAiB6RU5Cq"
-      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFaaUnx1KDS6zsH4ADeumbZQsIkBWeGW/TCquzMjtg9T"
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIE/Cr+bIMxMzkk8dN7xxRsaJeHRifwlyTuh/ja9Uy9MN"
     ];
   };
 
@@ -99,14 +98,17 @@ in {
     gc = {
       automatic = true;
       dates = "04:00";
-      options = "--delete-older-than 30d";
+      options = "--delete-older-than 7d";
     };
     extraOptions = ''
       min-free = ${toString (500 * 1024 * 1024)}
     '';
 
-    # Automatic store optimization.
-    autoOptimiseStore = true;
+    settings = {
+      trusted-users = [ "root" "adi" ];
+      # Automatic store optimization.
+      auto-optimise-store = true;
+    };
   };
 
   system = {
@@ -114,7 +116,7 @@ in {
     autoUpgrade.enable = true;
     autoUpgrade.allowReboot = true;
 
-    stateVersion = "21.11";
+    stateVersion = "23.05";
   };
 
   environment = {
@@ -123,51 +125,23 @@ in {
 
     # Packages which should be installed on every machine.
     systemPackages = with pkgs; [
-      bandwhich
-      bind
-      byobu
       comma
-      conntrack-tools
-      dmidecode
-      ethtool
-      bpftools
-      linuxPackages.bpftrace
-      gcc
-      go
-      git
-      gitAndTools.gh
-      gnumake
-      htop
-      iftop
-      iperf3
-      iptables
-      jq
-      lm_sensors
-      lshw
-      lsscsi
-      mosh
-      mkpasswd
-      mtr
-      ndisc6
-      neofetch
-      nethogs
-      nixfmt
-      nmap
-      nmon
-      pciutils
-      pkg-config
-      ripgrep
-      smartmontools
+      unstable.direnv
+      unstable.git
+      unstable.go
+      unstable.clinfo
+      unstable.lshw
+      unstable.htop
+      unstable.iftop
+      unstable.iotop
+      unstable.intel-gpu-tools
+      unstable.neofetch
+      unstable.nixfmt
+      unstable.ripgrep
+      unstable.starship
       unstable.tailscale
-      tcpdump
-      tmux
-      unixtools.xxd
-      unzip
-      usbutils
-      wireguard-tools
-      wget
-      zsh
-      python
+      unstable.wget
+      unstable.zsh
     ];
   };
 
@@ -176,20 +150,58 @@ in {
 
   # Enable Chrony
   services.chrony.enable = true;
+  services.chrony.package = unstable.chrony;
+  services.chrony.extraConfig = ''
+    makestep 1.0 10
+    hwtimestamp *
+    rtcsync
+  '';
+  
 
   # Enable the OpenSSH daemon.
   services.openssh.enable = true;
-  programs.mosh.enable = true;
+  programs.mosh = { enable = true; };
 
   # fstrim
-  services.fstrim.enable = true;
-  
+  services.fstrim = { enable = true; };   
+
   # fwupd
-  services.fwupd.enable = true;
+  services.fwupd = {
+    package = unstable.fwupd;
+    enable = true;
+  };
 
   security.sudo.wheelNeedsPassword = false;
-  virtualisation.docker = { enable = true; };
 
+  virtualisation.docker = {
+    enable = true;
+    package = unstable.docker;
+    daemon.settings = {
+      experimental = true;
+      ipv6 = true;
+      fixed-cidr-v6 = "2001:db8:1::/64";
+      ip6tables = true;
+      registry-mirrors = [ "https://mirror.gcr.io" ];
+    };
+  };
+
+  services.nfs.server.enable = true;
+  services.nfs.server.exports = ''
+    /persist *(rw,fsid=root,no_subtree_check)
+  '';
+  services.nfs.server.hostName = "100.122.68.5";
+  systemd.services.nfs-server = {
+    after = [ "tailscaled.service" ];
+  };
+
+
+  programs.starship = {
+    enable = true;
+    settings = {
+      add_newline = true;
+      format = "$all";
+    };
+  };
   programs.zsh = {
     enable = true;
     enableCompletion = true;
@@ -197,11 +209,8 @@ in {
     enableGlobalCompInit = true;
     syntaxHighlighting.enable = true;
     autosuggestions.enable = true;
-
-    ohMyZsh = {
-      enable = true;
-      plugins = [ "git" "sudo" ];
-      theme = "agnoster";
-    };
+    interactiveShellInit = ''
+      eval "$(direnv hook zsh)"
+    '';
   };
 }

@@ -7,14 +7,15 @@ let
 
 in {
 
-  imports =
-    [ <nixpkgs-unstable/nixos/modules/services/networking/tailscale.nix> ];
-  disabledModules = [ "services/networking/tailscale.nix" ];
-
-  nixpkgs.config = baseconfig // {
-    packageOverrides = pkgs: { tailscale = unstable.tailscale; };
+  services.tailscale = {
+    enable = true;
+    package = unstable.tailscale;
   };
+  imports = [
+    (fetchTarball
+      "https://github.com/msteen/nixos-vscode-server/tarball/master")
+  ];
 
-  services.tailscale.enable = true;
-
+  services.vscode-server.enable = true;
+  environment.systemPackages = [ unstable.vscode-extensions.mkhl.direnv ];
 }

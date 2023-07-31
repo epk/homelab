@@ -15,7 +15,7 @@
   fileSystems."/" = {
     device = "/dev/disk/by-uuid/62f0e61d-cd7b-4bdc-9ef6-e9410525afd7";
     fsType = "ext4";
-    options = ["noatime" "nodiratime" "discard" ];
+    options = [ "noatime" "nodiratime" "discard" ];
   };
 
   fileSystems."/boot" = {
@@ -23,10 +23,10 @@
     fsType = "vfat";
   };
 
-  fileSystems."/home/adi/data" = { 
+  fileSystems."/persist" = {
     device = "/dev/disk/by-uuid/d2c292da-cd39-425d-87ca-72408a93d7d7";
     fsType = "ext4";
-    options = ["noatime" "nodiratime" "discard" ];
+    options = [ "noatime" "nodiratime" "discard" ];
   };
 
   swapDevices =
@@ -35,6 +35,4 @@
   powerManagement.cpuFreqGovernor = lib.mkDefault "performance";
   hardware.cpu.intel.updateMicrocode =
     lib.mkDefault config.hardware.enableRedistributableFirmware;
-  # high-resolution display
-  hardware.video.hidpi.enable = lib.mkDefault true;
 }
