@@ -8,8 +8,8 @@ let
   comma = (import (pkgs.fetchFromGitHub {
     owner = "nix-community";
     repo = "comma";
-    rev = "v1.7.1";
-    sha256 = "sha256-x2HVm2vcEFHDrCQLIp5QzNsDARcbBfPdaIMLWVNfi4c=";
+    rev = "v1.9.0";
+    sha256 = "sha256-XXe0SSdH2JZLx0o+vHDtdlDRtVn7nouIngipbXhmhiQ=";
   })).default;
 
 in {
@@ -18,23 +18,24 @@ in {
     (modulesPath + "/profiles/all-hardware.nix")
 
     <nixos-hardware/common/pc/ssd>
-    <nixos-hardware/common/cpu/intel>
+    # <nixos-hardware/common/cpu/intel>
 
     # Service configuration.
     ./o11y.nix
     ./tailscale.nix
     ./containers.nix
+    ./envoy.nix
   ];
 
-  hardware.opengl = {
+  hardware.graphics = {
     enable = true;
     extraPackages = with pkgs; [
       unstable.intel-compute-runtime
-      stable.intel-ocl
-      stable.intel-media-driver
-      stable.vaapiIntel
-      stable.vaapiVdpau
-      stable.libvdpau-va-gl
+      # unstable.intel-ocl
+      unstable.intel-media-driver
+      unstable.vaapiIntel
+      unstable.vaapiVdpau
+      unstable.libvdpau-va-gl
     ];
   };
 
@@ -46,7 +47,7 @@ in {
     };
 
     # Latest Linux kernel
-    kernelPackages = unstable.linuxPackages_latest;
+    kernelPackages = unstable.linuxPackages_6_12;
 
     kernelModules = [ "tcp_bbr" "kvm-intel" ];
     kernel.sysctl."net.ipv4.tcp_congestion_control" = "bbr";
@@ -69,8 +70,8 @@ in {
       enable = true;
       checkReversePath = "loose";
       trustedInterfaces = [ "tailscale0" "eno1" ];
-      allowedUDPPorts = [ 443 config.services.tailscale.port 51413 4001 ];
-      allowedTCPPorts = [ 22 53 80 443 51413 4001 8080];
+      allowedUDPPorts = [ 53 443 config.services.tailscale.port 51413 4001 ];
+      allowedTCPPorts = [ 22 53 443 51413 4001 8080 ];
     };
   };
 
@@ -85,8 +86,13 @@ in {
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.adi = {
     isNormalUser = true;
-    extraGroups =
-      [ "wheel" "sudo" "oci" "docker" "root" ]; # Enable ‘sudo’ for the user.
+    extraGroups = [
+      "wheel"
+      "sudo"
+      "oci"
+      "docker"
+      "root"
+    ]; # Enable ‘sudo’ for the user.
     shell = pkgs.zsh;
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIE/Cr+bIMxMzkk8dN7xxRsaJeHRifwlyTuh/ja9Uy9MN"
@@ -116,7 +122,7 @@ in {
     autoUpgrade.enable = true;
     autoUpgrade.allowReboot = true;
 
-    stateVersion = "23.05";
+    stateVersion = "24.11";
   };
 
   environment = {
@@ -126,6 +132,12 @@ in {
     # Packages which should be installed on every machine.
     systemPackages = with pkgs; [
       comma
+      # stable.vagrant
+      yq-go
+      jq
+      ethtool
+      fwup
+      unstable.devenv
       unstable.direnv
       unstable.git
       unstable.go
@@ -151,23 +163,22 @@ in {
   # Enable Chrony
   services.chrony.enable = true;
   services.chrony.package = unstable.chrony;
+  services.chrony.initstepslew.threshold = 1.0e-5;
   services.chrony.extraConfig = ''
     makestep 1.0 10
     hwtimestamp *
-    rtcsync
   '';
-  
 
   # Enable the OpenSSH daemon.
   services.openssh.enable = true;
   programs.mosh = { enable = true; };
 
   # fstrim
-  services.fstrim = { enable = true; };   
+  services.fstrim = { enable = true; };
 
   # fwupd
   services.fwupd = {
-    package = unstable.fwupd;
+    package = stable.fwupd;
     enable = true;
   };
 
@@ -185,15 +196,14 @@ in {
     };
   };
 
+  services.iperf3.enable = true;
+
   services.nfs.server.enable = true;
   services.nfs.server.exports = ''
     /persist *(rw,fsid=root,no_subtree_check)
   '';
-  services.nfs.server.hostName = "100.122.68.5";
-  systemd.services.nfs-server = {
-    after = [ "tailscaled.service" ];
-  };
-
+  services.nfs.server.hostName = "100.81.1.1";
+  systemd.services.nfs-server = { after = [ "tailscaled.service" ]; };
 
   programs.starship = {
     enable = true;
